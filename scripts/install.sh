@@ -1,52 +1,27 @@
 #!/bin/bash
 
-export AWSACCESSKEYID=$1
-export AWSSECRETACCESSKEY=$2 
-
 echo $(date) " - Starting Script"
 
-# Install EPEL repository
-echo $(date) " - Installing EPEL"
+echo $(date) "Install and Configure Required Dependencies"
 
-yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
-sed -i -e "s/^enabled=1/enabled=0/" /etc/yum.repos.d/epel.repo
-
-echo $(date) " - EPEL successfully installed"
-
-echo $(date) " - Install Pip"
-
-curl "https://bootstrap.pypa.io/get-pip.py" -o "get-pip.py"
-python get-pip.py
-
-echo $(date) " - Install Ansible"
-
-pip install ansible
-pip install boto3
-
-echo $(date) " - Checkout Git Repo"
-
-yum -y install git
-
-git clone https://github.com/tagliateller/openshift-ansible.git openshift-ansible
-cd openshift-ansible
-git checkout release-3.11
-
-#https://github.com/openshift/openshift-ansible/tree/release-3.11/playbooks/aws
-		
-#~/.aws/credentials 
-		
-#[myaccount]
-#aws_access_key_id = <Your access_key here>
-#aws_secret_access_key = <Your secret acces key here>
-
-echo $(date) " - Create AWS Credentials"
-
-mkdir -p ~/.aws/
-cat > ~/.aws/credentials <<EOF
-[myaccount]
-aws_access_key_id = ${AWSACCESSKEYID}
-aws_secret_access_key = ${AWSSECRETACCESSKEY}
-EOF
+yum -y install curl policycoreutils-python openssh-server 
  
+yum -y install postfix
+systemctl start postfix
+systemctl enable postfix
+systemctl status postfix
+
+echo $(date) "Add GitLab Repository and Install Package"
+
+curl https://packages.gitlab.com/install/repositories/gitlab/gitlab-ce/script.rpm.sh | sudo bash
+
+EXTERNAL_URL="http://gitlab.tecmint.com" yum install -y gitlab-ce
+
+gitlab-ctl reconfigure
+
+firewall-cmd --permanent --add-service=80/tcp
+firewall-cmd --permanent --add-service=443/tcp
+systemctl reload firewalld
+
 echo $(date) " - Script Complete"
 
